@@ -1,5 +1,4 @@
 import smtplib
-import ssl
 import sys
 import time
 from email.mime.multipart import MIMEMultipart
@@ -43,7 +42,7 @@ options.add_argument("--headless")
 print("webstudent-observer started")
 
 while True:
-    driver = webdriver.Chrome(executable_path="/home/axbg/Downloads/chromedriver", options=options)
+    driver = webdriver.Chrome(executable_path="./chromedriver", options=options)
 
     driver.fullscreen_window()
     driver.implicitly_wait(1)
@@ -99,8 +98,7 @@ while True:
             for studied_class, grade in zip(classes, grades):
                 mail_body += studied_class + ": " + grade + "\n"
 
-            context = ssl.create_default_context()
-            server = smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context)
+            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             server.login(credentials.GMAIL_USER, credentials.GMAIL_PASSWORD)
 
             msg = MIMEMultipart('alternative')
