@@ -41,36 +41,36 @@ options.add_argument("--headless")
 
 print("webstudent-observer started")
 
+driver = webdriver.Chrome(executable_path="./chromedriver")
+
+driver.fullscreen_window()
+driver.implicitly_wait(1)
+
+driver.get("http://webstudent.ase.ro")
+
+username = driver.find_element_by_id("txtUtilizator")
+username.send_keys(credentials.WEBSTUDENT_ACCOUNT)
+
+password = driver.find_element_by_id("txtParola")
+password.send_keys(credentials.WEBSTUDENT_PASSWORD)
+
+login_button = driver.find_element_by_id("btnConectare")
+login_button.click()
+
+grades_button = driver.find_element_by_xpath(
+    '/html/body/form/div[3]/div[1]/div[2]/table/tbody/tr/td/div/ul/li[4]/a')
+grades_button.click()
+
+semesters_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[1]/table/tbody')
+semesters = semesters_table.find_elements_by_tag_name('tr')
+
+observed_semester = find_semester(year, semester, semesters)
+
+if observed_semester is None:
+    print("Semester was not found")
+    exit(0)
+
 while True:
-    driver = webdriver.Chrome(executable_path="./chromedriver", options=options)
-
-    driver.fullscreen_window()
-    driver.implicitly_wait(1)
-
-    driver.get("http://webstudent.ase.ro")
-
-    username = driver.find_element_by_id("txtUtilizator")
-    username.send_keys(credentials.WEBSTUDENT_ACCOUNT)
-
-    password = driver.find_element_by_id("txtParola")
-    password.send_keys(credentials.WEBSTUDENT_PASSWORD)
-
-    login_button = driver.find_element_by_id("btnConectare")
-    login_button.click()
-
-    grades_button = driver.find_element_by_xpath(
-        '/html/body/form/div[3]/div[1]/div[2]/table/tbody/tr/td/div/ul/li[4]/a')
-    grades_button.click()
-
-    semesters_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[1]/table/tbody')
-    semesters = semesters_table.find_elements_by_tag_name('tr')
-
-    observed_semester = find_semester(year, semester, semesters)
-
-    if observed_semester is None:
-        print("Semester was not found")
-        exit(0)
-
     observed_semester.click()
 
     time.sleep(1)
@@ -88,10 +88,8 @@ while True:
             classes.append(studied_class)
             grades.append(grade)
 
-    driver.close()
-
     if len(old_classes) != 0:
-        if len(old_classes) != len(classes):
+        if len(old_classes) == len(classes):
             old_classes = [i for i in classes]
             mail_body = ""
 
@@ -113,3 +111,11 @@ while True:
         old_classes = [i for i in classes]
 
     time.sleep(refresh_time)
+
+    driver.refresh()
+
+    semesters_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[1]/table/tbody')
+
+    semesters = semesters_table.find_elements_by_tag_name('tr')
+
+    observed_semester = find_semester(year, semester, semesters)

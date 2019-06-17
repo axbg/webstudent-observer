@@ -2,9 +2,7 @@
 ##### probably I should've written this earlier...
 #
 ###### The Bucharest University of Economic Studies uses a platform called WebStudent for publishing the exam results. Sadly, the platform doesn't send notifications of any sort. 
-#
 ##### Sooo...
-#
 ###### This python script uses Selenium to login into a WebStudent account and check the grades page for a specified year and semester. The grades list is checked at a refresh rate received as a parameter and, if updated, an email will be sent with the updated results. 
 #
 ##### Deployment
