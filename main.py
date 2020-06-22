@@ -1,121 +1,98 @@
-import smtplib
 import sys
 import time
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+import mailer
+import validators
+import automation
 import credentials
 
 
-def find_semester(year_p, semester_p, semesters_p):
-    for sem in semesters_p:
-        current_year = int(sem.find_element_by_css_selector('td:nth-child(1)').text)
-        current_semester = int(sem.find_element_by_css_selector('td:nth-child(2)').text)
+def observe(driver):
+    promotion = ""
+    old_classes = []
+    observed_semester = None
+    semester, refresh_time, error_counter = 0, 0, 0
 
-        if current_year == year_p and current_semester == semester_p:
-            return sem.find_element_by_css_selector('td:nth-child(4)').find_elements_by_tag_name('span')[
-                0].find_element_by_css_selector('input:nth-child(1)')
+    try:
+        promotion = sys.argv[1]
+        semester = int(sys.argv[2])
+        refresh_time = int(sys.argv[3])
 
-    return None
+        print("webstudent-observer started")
 
+        driver.get("http://webstudent.ase.ro")
 
-old_classes = []
-year = 0
-semester = 0
-refresh_time = 0
+        automation.login(driver)
+        automation.navigate_to_grades(driver)
+        observed_semester = automation.get_observed_semester(
+            driver, promotion, semester)
 
-try:
-    year = int(sys.argv[1])
-    semester = int(sys.argv[2])
-    refresh_time = int(sys.argv[3])
-except IndexError:
-    print("You should specify year and semester and refresh rate in seconds as command line parameters")
-    print("python main.py 3 1 10")
-    exit(0)
+        if observed_semester is None:
+            print("Semester was not found")
+            return
+    except IndexError:
+        print("You should specify promotion, semester and refresh rate in seconds as command line parameters")
+        print("python main.py \"2019 - 2020\" 1 10")
+    except Exception:
+        raise
 
-options = Options()
-options.add_argument("--headless")
+    while True:
+        try:
+            observed_semester.click()
 
-print("webstudent-observer started")
+            time.sleep(refresh_time / 2)
 
-driver = webdriver.Chrome(executable_path="./chromedriver")
+            grades_rows = automation.get_grades_rows(driver)
 
-driver.fullscreen_window()
-driver.implicitly_wait(1)
+            classes, grades = [], []
 
-driver.get("http://webstudent.ase.ro")
+            for i in range(0, len(grades_rows)):
+                if i != 0:
+                    studied_class = grades_rows[i].find_element_by_css_selector(
+                        'td:nth-child(2)').text
+                    grade = grades_rows[i].find_element_by_css_selector(
+                        'td:nth-child(5)').text
+                    classes.append(studied_class)
+                    grades.append(grade)
 
-username = driver.find_element_by_id("txtUtilizator")
-username.send_keys(credentials.WEBSTUDENT_ACCOUNT)
+            if len(old_classes) != 0 and len(old_classes) != len(classes):
+                print("hai cu mail")
+                mail_body = ""
+                for studied_class, grade in zip(classes, grades):
+                    mail_body += studied_class + ": " + grade + "\n"
+                mailer.send_mail(mail_body)
 
-password = driver.find_element_by_id("txtParola")
-password.send_keys(credentials.WEBSTUDENT_PASSWORD)
-
-login_button = driver.find_element_by_id("btnConectare")
-login_button.click()
-
-grades_button = driver.find_element_by_xpath(
-    '/html/body/form/div[3]/div[1]/div[2]/table/tbody/tr/td/div/ul/li[4]/a')
-grades_button.click()
-
-semesters_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[1]/table/tbody')
-semesters = semesters_table.find_elements_by_tag_name('tr')
-
-observed_semester = find_semester(year, semester, semesters)
-
-if observed_semester is None:
-    print("Semester was not found")
-    exit(0)
-
-while True:
-    observed_semester.click()
-
-    time.sleep(1)
-
-    grades_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[2]/table/tbody')
-    grades_rows = grades_table.find_elements_by_tag_name('tr')
-
-    classes = []
-    grades = []
-
-    for i in range(0, len(grades_rows)):
-        if i != 0:
-            studied_class = grades_rows[i].find_element_by_css_selector('td:nth-child(2)').text
-            grade = grades_rows[i].find_element_by_css_selector('td:nth-child(5)').text
-            classes.append(studied_class)
-            grades.append(grade)
-
-    if len(old_classes) != 0:
-        if len(old_classes) == len(classes):
             old_classes = [i for i in classes]
-            mail_body = ""
 
-            for studied_class, grade in zip(classes, grades):
-                mail_body += studied_class + ": " + grade + "\n"
+            time.sleep(refresh_time / 2)
 
-            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-            server.login(credentials.GMAIL_USER, credentials.GMAIL_PASSWORD)
+            driver.refresh()
+            observed_semester = automation.get_observed_semester(
+                driver, promotion, semester)
+        except Exception as ex:
+            print("Exception thrown: {}".format(ex))
 
-            msg = MIMEMultipart('alternative')
-            msg['FROM'] = credentials.GMAIL_USER
-            msg['To'] = credentials.GMAIL_SEND_TO
-            msg['Subject'] = credentials.GMAIL_SUBJECT
-            msg.attach(MIMEText(mail_body.encode('utf-8'), _charset='utf-8'))
+            if error_counter > 10:
+                raise
 
-            server.sendmail(credentials.GMAIL_USER, credentials.GMAIL_SEND_TO, msg.as_string())
-            server.close()
-    else:
-        old_classes = [i for i in classes]
+            error_counter += 1
+            continue
 
-    time.sleep(refresh_time)
 
-    driver.refresh()
+if __name__ == "__main__":
+    options = Options()
+    options.add_argument("--headless")
 
-    semesters_table = driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[1]/div[1]/table/tbody')
+    driver = webdriver.Chrome(executable_path="/", options=options)
+    driver.fullscreen_window()
+    driver.implicitly_wait(1)
 
-    semesters = semesters_table.find_elements_by_tag_name('tr')
-
-    observed_semester = find_semester(year, semester, semesters)
+    try:
+        observe(driver)
+    except Exception as ex:
+        print("Crashed due to occuring exception: {}".format(ex))
+    finally:
+        driver.close()
