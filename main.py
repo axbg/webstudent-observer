@@ -57,7 +57,7 @@ def observe(driver):
                         'td:nth-child(5)').text
                     classes.append(studied_class)
                     grades.append(grade)
-
+            
             if len(old_classes) != 0 and len(old_classes) != len(classes):
                 print("hai cu mail")
                 mail_body = ""
@@ -70,8 +70,7 @@ def observe(driver):
             time.sleep(refresh_time / 2)
 
             driver.refresh()
-            observed_semester = automation.get_observed_semester(
-                driver, promotion, semester)
+            observed_semester = automation.get_observed_semester(driver, promotion, semester)
         except Exception as ex:
             print("Exception thrown: {}".format(ex))
 
@@ -85,8 +84,9 @@ def observe(driver):
 if __name__ == "__main__":
     options = Options()
     options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
 
-    driver = webdriver.Chrome(executable_path="/", options=options)
+    driver = webdriver.Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", options=options)
     driver.fullscreen_window()
     driver.implicitly_wait(1)
 

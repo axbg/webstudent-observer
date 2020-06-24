@@ -13,6 +13,8 @@
 * *[optional]* install python3-venv and create a sandbox 
 * Install dependencies 
   * ```pip install -r requirements.txt```
+* Install chromium
+  * ```sudo apt install chromium-browser```
 * Fill the variables in credentials.py
   * WEBSTUDENT_ACCOUNT
   * WEBSTUDENT_PASSWORD
@@ -46,6 +48,6 @@ To avoid any related problem, you can apply the following changes:
     * ```from webdriver_manager.chrome import ChromeDriverManager```
   * replace the default driver instantiation in main.py *(line 89)*
       ```python
-      # driver = webdriver.Chrome(executable_path="./chromedriver", options=options)
+      # driver = webdriver.Chrome(executable_path="/usr/lib/chromium-browser/chromedriver", options=options)
       driver = webdriver.Chrome(ChromeDriverManager().install(), options = options)
       ```
