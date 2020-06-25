@@ -14,7 +14,7 @@ def observe(driver):
     promotion = ""
     old_classes = []
     observed_semester = None
-    semester, refresh_time, error_counter = 0, 0, 0
+    semester, refresh_time = 0, 0
 
     try:
         promotion = sys.argv[1]
@@ -27,8 +27,7 @@ def observe(driver):
 
         automation.login(driver)
         automation.navigate_to_grades(driver)
-        observed_semester = automation.get_observed_semester(
-            driver, promotion, semester)
+        observed_semester = automation.get_observed_semester(driver, promotion, semester)
 
         if observed_semester is None:
             print("Semester was not found")
@@ -42,43 +41,35 @@ def observe(driver):
     while True:
         try:
             observed_semester.click()
-
+            
             time.sleep(refresh_time / 2)
 
             grades_rows = automation.get_grades_rows(driver)
-
             classes, grades = [], []
 
             for i in range(0, len(grades_rows)):
                 if i != 0:
-                    studied_class = grades_rows[i].find_element_by_css_selector(
-                        'td:nth-child(2)').text
-                    grade = grades_rows[i].find_element_by_css_selector(
-                        'td:nth-child(5)').text
+                    studied_class = grades_rows[i].find_element_by_css_selector( 'td:nth-child(2)').text
+                    grade = grades_rows[i].find_element_by_css_selector('td:nth-child(5)').text
                     classes.append(studied_class)
                     grades.append(grade)
             
             if len(old_classes) != 0 and len(old_classes) != len(classes):
-                print("hai cu mail")
                 mail_body = ""
                 for studied_class, grade in zip(classes, grades):
                     mail_body += studied_class + ": " + grade + "\n"
                 mailer.send_mail(mail_body)
 
             old_classes = [i for i in classes]
-
-            time.sleep(refresh_time / 2)
-
-            driver.refresh()
-            observed_semester = automation.get_observed_semester(driver, promotion, semester)
         except Exception as ex:
             print("Exception thrown: {}".format(ex))
-
-            if error_counter > 10:
-                raise
-
-            error_counter += 1
             continue
+        finally:
+            driver.refresh()
+            
+            time.sleep(refresh_time / 2) 
+            
+            observed_semester = automation.get_observed_semester(driver, promotion, semester)
 
 
 if __name__ == "__main__":
